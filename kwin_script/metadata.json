@@ -1,0 +1,20 @@
+{
+  "KPackageStructure": "KWin/Script",
+  "KPlugin": {
+    "Id": "KWinIdleTime",
+    "Version": "1.0.0",
+    "Name": "KWinIdleTime",
+    "Description": "A script that sends idle notifications to a listening user daemon.",
+    "Icon": "preferences-system-windows",
+    "Authors": [
+      {
+        "Name": "Kale Ko",
+        "Email": "contact@kaleko.dev"
+      }
+    ],
+    "License": "MIT",
+    "Website": "https://github.com/Kale-Ko/KWinIdleTime"
+  },
+  "X-Plasma-API": "javascript",
+  "X-Plasma-MainScript": "code/main.js"
+}
