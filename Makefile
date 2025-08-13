@@ -1,15 +1,12 @@
-build: build_daemon
+build: build_daemon build_listener
 
 build_daemon: daemon/main.py
 	pyinstaller --clean --noconfirm --onefile --name daemon daemon/main.py --distpath dist/ --workpath build/ --specpath build/ --noconsole --optimize 2 --strip --argv-emulation
 
-install: install_daemon install_kwin_script
+build_listener: listener/main.py
+	pyinstaller --clean --noconfirm --onefile --name listener listener/main.py --distpath dist/ --workpath build/ --specpath build/ --noconsole --optimize 2 --strip --argv-emulation
 
-install_daemon: build_daemon
-# 	install -Dm755 dist/daemon -t /usr/bin/
-# 	install -Dm644 daemon/daemon.service -t /usr/lib/systemd/user/
-# 	systemctl --user enable daemon.service
-# 	systemctl --user start daemon.service
+install: install_kwin_script
 
 install_kwin_script:
 	kpackagetool6 --type=KWin/Script -i kwin_script/
@@ -26,4 +23,4 @@ upgrade_kwin_script:
 	kpackagetool6 --type=KWin/Script -u kwin_script/
 
 clean:
-	rm -rf build/ dist/
+	rm -rf build/
