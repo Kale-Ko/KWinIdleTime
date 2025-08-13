@@ -3,11 +3,11 @@
 import sys
 import argparse
 
-arg_parser = argparse.ArgumentParser(prog="kwinidletime-daemon", usage="%(prog)s [options]", description="KWin Idle Time Daemon", epilog="For more information, visit https://github.com/Kale-Ko/KWinIdleTime")
+arg_parser: argparse.ArgumentParser = argparse.ArgumentParser(prog="kwinidletime-daemon", usage="%(prog)s [options]", description="KWin Idle Time Daemon", epilog="For more information, visit https://github.com/Kale-Ko/KWinIdleTime")
 
 arg_parser.add_argument("-t", "--threshold", type=float, default=120.0, help="Set how long it will for the daemon to mark the user as idle (default: 2 minutes)")
 
-args = arg_parser.parse_args(sys.argv[1::])
+args: argparse.Namespace = arg_parser.parse_args(sys.argv[1::])
 
 import asyncio
 import dbus_next
@@ -34,7 +34,7 @@ class KWinIdleTime(dbus_next.service.ServiceInterface):
         last_interaction = time.time()
 
         if is_idle:
-            print("User has become active @ {:.0f}ms after {:0.1f} seconds".format(last_interaction * 1000, delta_time))
+            print(f"User has become active @ {last_interaction * 1000:.0f}ms after {delta_time:0.1f} seconds")
 
             is_idle = False
             self.UserActive(delta_time)
@@ -60,7 +60,7 @@ async def run():
 
     await bus.connect()
 
-    await bus.request_name(name="io.github.kale_ko.KWinIdleTime", flags=dbus_next.constants.NameFlag.ALLOW_REPLACEMENT | dbus_next.constants.NameFlag.REPLACE_EXISTING)
+    await bus.request_name(name="io.github.kale_ko.KWinIdleTime", flags=dbus_next.constants.NameFlag.NONE)
 
     interface: KWinIdleTime = KWinIdleTime(name="io.github.kale_ko.KWinIdleTime")
 
@@ -75,7 +75,7 @@ async def run():
         if not is_idle:
             current_time: float = time.time()
             if current_time - last_interaction > threshold_time:
-                print("User has become idle @ {:.0f}ms".format(last_interaction * 1000))
+                print(f"User has become idle @ {last_interaction * 1000:.0f}ms")
 
                 is_idle = True
                 interface.UserIdle()
