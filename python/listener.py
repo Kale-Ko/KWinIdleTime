@@ -1,116 +1,182 @@
 #!/usr/bin/env python3
-
-import sys
-import argparse
-
-arg_parser: argparse.ArgumentParser = argparse.ArgumentParser(prog=sys.argv[0], usage="%(prog)s [options]", description="KWin Idle Time Listener", epilog="For more information, visit https://github.com/Kale-Ko/KWinIdleTime")
-
-arg_parser.add_argument("-l", "--listeners-path", type=str, required=True, help="Set the path that listeners are automatically loaded from. Files must be executable to be loaded.")
-
-if __name__ != "__main__":
-    arg_parser.add_argument("-t", "--threshold", type=float, default=120.0, help="Set how long it will for the daemon to mark the user as idle (default: 2 minutes)")
-
-args: argparse.Namespace = arg_parser.parse_args(sys.argv[1::])
-
-
-import sys
-import os
-import os.path
-import subprocess
-
-listeners_path: str = os.path.abspath(args.listeners_path)
-
-listeners: list[str] = []
-
-
-def load_listeners():
-    print(f"Looking for listeners in '{listeners_path}'...")
-
-    os.makedirs(listeners_path, exist_ok=True)
-
-    files: list[str] = os.listdir(listeners_path)
-
-    for file in files:
-        file: str = os.path.join(listeners_path, file)
-        if not os.path.isfile(file):
-            continue
-
-        if not os.access(file, os.R_OK | os.X_OK):
-            continue
-
-        listeners.append(file)
-
-    if len(listeners) > 0:
-        print(f"Loaded {len(listeners)} listeners successfully.")
-    else:
-        print(f"No listeners found!")
-
-
-def on_user_idle():
-    if __name__ == "__main__":
-        print(f"User has become idle.")
-
-    for listener in listeners:
-        try:
-            subprocess.run(args=[listener, "idle"], cwd=listeners_path, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True, timeout=15.0)
-        except subprocess.SubprocessError as e:
-            print(f"Error executing listener '{listener}': {e}")
-            continue
-
-        print(f"Executed idle listener '{listener}'.")
-
-
-def on_user_active(delta: float):
-    if __name__ == "__main__":
-        print(f"User has become active after {delta:0.1f} seconds")
-
-    for listener in listeners:
-        try:
-            subprocess.run(args=[listener, "active", f"{delta:.2f}"], cwd=listeners_path, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True, timeout=15.0)
-        except subprocess.SubprocessError as e:
-            print(f"Error executing listener '{listener}': {e}")
-            continue
-
-        print(f"Executed active listener '{listener}'.")
-
-
-load_listeners()
-
 import asyncio
-import dbus_next
-import dbus_next.aio
+import os
+import stat
+import sys
+from typing import Optional
+from dbus_next.aio import MessageBus
+from dbus_next.constants import MessageType
+from dbus_next import Message
 
-running: bool = False
+IFACE = "io.github.kale_ko.KWinIdleTime"
+OBJ_PATH = "/io/github/kale_ko/KWinIdleTime"
+DEFAULT_TIMEOUT = 15.0
 
 
-async def run(stop_event: asyncio.Event = asyncio.Event()):
-    global running
+def xdg_config_home() -> str:
+    return os.environ.get("XDG_CONFIG_HOME", os.path.join(os.path.expanduser("~"), ".config"))
 
-    running = True
 
-    bus: dbus_next.aio.message_bus.MessageBus = dbus_next.aio.message_bus.MessageBus(bus_type=dbus_next.constants.BusType.SESSION)
+def listeners_dir() -> str:
+    return os.environ.get("KWINIDLETIME_LISTENERS_DIR", os.path.join(xdg_config_home(), "kwinidletime", "listeners"))
 
-    await bus.connect()
 
-    kwin_idle_time_introspection_data: str = open(os.path.join(os.path.dirname(__file__), "io.github.kale_ko.KWinIdleTime.xml")).read()
-    kwin_idle_time_introspection: dbus_next.introspection.Node = dbus_next.introspection.Node.parse(kwin_idle_time_introspection_data)
-    kwin_idle_time_proxy_object: dbus_next.aio.proxy_object.ProxyObject = bus.get_proxy_object("io.github.kale_ko.KWinIdleTime", "/io/github/kale_ko/KWinIdleTime", introspection=kwin_idle_time_introspection)
-    kwin_idle_time: dbus_next.aio.proxy_object.ProxyInterface = kwin_idle_time_proxy_object.get_interface("io.github.kale_ko.KWinIdleTime")
+def ensure_secure_dir(path: str) -> None:
+    try:
+        st = os.stat(path, follow_symlinks=False)
+    except FileNotFoundError:
+        os.makedirs(path, mode=0o700, exist_ok=True)
+        st = os.stat(path, follow_symlinks=False)
+    if not stat.S_ISDIR(st.st_mode):
+        sys.exit(f"{path} is not a directory")
+    if st.st_uid != os.getuid():
+        sys.exit(f"{path} must be owned by the current user")
+    if (st.st_mode & (stat.S_IWGRP | stat.S_IWOTH)):
+        sys.exit(f"{path} must not be group/other-writable (chmod 700)")
 
-    kwin_idle_time.on_user_idle(on_user_idle)
-    kwin_idle_time.on_user_active(on_user_active)
 
-    while running and not stop_event.is_set():
+def safe_iter_listeners(root: str):
+    root_real = os.path.realpath(root)
+    try:
+        names = os.listdir(root)
+    except FileNotFoundError:
+        return
+    for name in sorted(names):
+        p = os.path.join(root, name)
+        if os.path.islink(p):
+            continue
+        real = os.path.realpath(p)
+        if not real.startswith(root_real + os.sep):
+            continue
         try:
-            await asyncio.sleep(1)
-        except (KeyboardInterrupt, asyncio.CancelledError):
-            running = False
+            st = os.stat(real, follow_symlinks=False)
+        except FileNotFoundError:
+            continue
+        if not stat.S_ISREG(st.st_mode):
+            continue
+        if st.st_uid != os.getuid():
+            continue
+        if (st.st_mode & (stat.S_IWGRP | stat.S_IWOTH)):
+            continue
+        if not os.access(real, os.X_OK):
+            continue
+        yield real
 
-    bus.disconnect()
+
+def _timeout() -> float:
+    try:
+        return float(os.getenv("KWINIDLETIME_LISTENER_TIMEOUT", str(DEFAULT_TIMEOUT)))
+    except Exception:
+        return DEFAULT_TIMEOUT
+
+
+async def run_exec(exe: str, args, cwd: Optional[str]) -> bool:
+    import subprocess, signal
+    timeout = _timeout()
+    with open(os.devnull, "rb") as devnull_in, open(os.devnull, "wb") as devnull_out:
+        proc = subprocess.Popen(
+            [exe, *args],
+            cwd=cwd,
+            stdin=devnull_in,
+            stdout=devnull_out,
+            stderr=devnull_out,
+            start_new_session=True,
+            close_fds=True,
+        )
+        loop = asyncio.get_running_loop()
+        try:
+            await asyncio.wait_for(loop.run_in_executor(None, proc.wait), timeout=timeout)
+        except asyncio.TimeoutError:
+            try:
+                os.killpg(proc.pid, signal.SIGTERM)
+            except ProcessLookupError:
+                pass
+            try:
+                await asyncio.wait_for(loop.run_in_executor(None, proc.wait), timeout=2.0)
+            except asyncio.TimeoutError:
+                try:
+                    os.killpg(proc.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+                await loop.run_in_executor(None, proc.wait)
+            return False
+        return proc.returncode == 0
+
+
+async def dispatch_all(kind: str, extra: Optional[str] = None) -> None:
+    root = listeners_dir()
+    ensure_secure_dir(root)
+    tasks = []
+    for exe in safe_iter_listeners(root):
+        args = [kind] + ([extra] if extra is not None else [])
+        tasks.append(asyncio.create_task(run_exec(exe, args, cwd=root)))
+    if tasks:
+        await asyncio.gather(*tasks, return_exceptions=True)
+
+
+async def get_name_owner(bus: MessageBus, name: str) -> Optional[str]:
+    try:
+        reply = await bus.call(
+            Message(
+                destination="org.freedesktop.DBus",
+                path="/org/freedesktop/DBus",
+                interface="org.freedesktop.DBus",
+                member="GetNameOwner",
+                signature="s",
+                body=[name],
+            )
+        )
+        return reply.body[0]
+    except Exception:
+        return None
+
+
+async def run(stop_event: asyncio.Event = asyncio.Event()) -> int:
+    bus = await MessageBus().connect()
+    owner: Optional[str] = await get_name_owner(bus, IFACE)
+
+    async def on_owner_changed(msg):
+        nonlocal owner
+        if msg.message_type != MessageType.SIGNAL:
+            return
+        if msg.interface != "org.freedesktop.DBus" or msg.member != "NameOwnerChanged":
+            return
+        try:
+            name, old, new = msg.body
+        except Exception:
+            return
+        if name == IFACE:
+            owner = new or None
+
+    bus.add_message_handler(on_owner_changed)
+
+    async def on_signal(msg):
+        if msg.message_type != MessageType.SIGNAL:
+            return
+        if msg.interface != IFACE or msg.path != OBJ_PATH:
+            return
+        if owner is not None and msg.sender != owner:
+            return
+        if msg.member == "UserIdle":
+            await dispatch_all("idle")
+        elif msg.member == "UserActive":
+            try:
+                idle_secs = int(msg.body[0])
+            except Exception:
+                idle_secs = 0
+            await dispatch_all("active", str(idle_secs))
+
+    bus.add_message_handler(lambda m: asyncio.create_task(on_signal(m)))
+
+    try:
+        await stop_event.wait()
+    except asyncio.CancelledError:
+        pass
+    return 0
 
 
 if __name__ == "__main__":
     try:
-        asyncio.run(run())
-    except (KeyboardInterrupt, asyncio.CancelledError):
-        running = False
+        raise SystemExit(asyncio.run(run()))
+    except KeyboardInterrupt:
+        raise SystemExit(130)

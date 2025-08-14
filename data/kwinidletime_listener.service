@@ -1,16 +1,34 @@
 [Unit]
-Description=KWinIdleTime Listener Service
-Requires=dbus.socket kwinidletime_daemon.service
-Conflicts=kwinidletime_combined.service
-After=dbus.socket kwinidletime_daemon.service
-ConditionUser=!@system
+Description=KWin Idle Time Listener
+After=graphical-session.target kwinidletime_daemon.service
+Requires=kwinidletime_daemon.service
+PartOf=graphical-session.target
 
 [Service]
-EnvironmentFile=%{config_dir}/config
 Type=simple
-ExecStart=/usr/bin/python3 "%{install_dir}/listener.py" --listeners-path "%{config_dir}/listeners/"
-WorkingDirectory=%{install_dir}
+ExecStart=/usr/bin/env python3 %h/.local/share/kwinidletime/listener.py
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ProtectControlGroups=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RestrictRealtime=yes
+RestrictNamespaces=yes
+RestrictAddressFamilies=AF_UNIX
+IPAddressDeny=any
+Environment=KWINIDLETIME_LISTENERS_DIR=%h/.config/kwinidletime/listeners
+Environment=KWINIDLETIME_LISTENER_TIMEOUT=15
+Restart=on-failure
+RestartSec=2s
+StartLimitBurst=5
+StartLimitIntervalSec=30s
 
 [Install]
-Also=kwinidletime_daemon.service
-WantedBy=graphical-session.target
+WantedBy=default.target

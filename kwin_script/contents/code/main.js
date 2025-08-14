@@ -1,7 +1,23 @@
-var i = 0;
+var c = 0;
+var T = 25;
+
+function ping() {
+    callDBus(
+        "io.github.kale_ko.KWinIdleTime",
+        "/io/github/kale_ko/KWinIdleTime",
+        "io.github.kale_ko.KWinIdleTime",
+        "MarkInteraction",
+        []
+    );
+}
+
 workspace.cursorPosChanged.connect(function () {
-    if (i % 25 === 0) {
-        callDBus("io.github.kale_ko.KWinIdleTime", "/io/github/kale_ko/KWinIdleTime", "io.github.kale_ko.KWinIdleTime", "MarkInteraction", function (response) { });
+    c++;
+    if (c % T === 0) {
+        ping();
     }
-    i++;
+});
+
+workspace.clientActivated.connect(function () {
+    ping();
 });
