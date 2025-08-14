@@ -8,7 +8,7 @@ arg_parser: argparse.ArgumentParser = argparse.ArgumentParser(prog=sys.argv[0], 
 arg_parser.add_argument("-t", "--threshold", type=float, default=120.0, help="Set how long it will for the daemon to mark the user as idle (default: 2 minutes)")
 
 if __name__ != "__main__":
-    arg_parser.add_argument("-l", "--listener-path", type=str, required=True, help="Set the path that listeners are automatically loaded from. Files must be executable to be loaded.")
+    arg_parser.add_argument("-l", "--listeners-path", type=str, required=True, help="Set the path that listeners are automatically loaded from. Files must be executable to be loaded.")
 
 args: argparse.Namespace = arg_parser.parse_args(sys.argv[1::])
 
