@@ -1,46 +1,52 @@
 #!/usr/bin/env python3
-
-import sys
-import argparse
-
-arg_parser: argparse.ArgumentParser = argparse.ArgumentParser(prog=sys.argv[0], usage="%(prog)s [options]", description="KWin Idle Time Daemon", epilog="For more information, visit https://github.com/Kale-Ko/KWinIdleTime")
-
-arg_parser.add_argument("-t", "--threshold", type=float, default=120.0, help="Set how long it will for the daemon to mark the user as idle (default: 2 minutes)")
-
-if __name__ != "__main__":
-    arg_parser.add_argument("-l", "--listeners-path", type=str, required=True, help="Set the path that listeners are automatically loaded from. Files must be executable to be loaded.")
-
-args: argparse.Namespace = arg_parser.parse_args(sys.argv[1::])
-
 import asyncio
-import dbus_next
-import dbus_next.aio
+import os
+import sys
 import time
+from typing import Optional
 
-threshold_time: float = args.threshold
+import dbus_next
+from dbus_next.aio import MessageBus
+from dbus_next.service import ServiceInterface
+from dbus_next.constants import NameFlag, RequestNameReply
 
-running: bool = False
-last_interaction: float = time.monotonic()
-is_idle: bool = False
+IFACE = "io.github.kale_ko.KWinIdleTime"
+OBJ_PATH = "/io/github/kale_ko/KWinIdleTime"
+DEFAULT_THRESHOLD = 120.0
+MIN_INTERVAL = 0.02
 
 
-class KWinIdleTime(dbus_next.service.ServiceInterface):
-    def __init__(self, name: str):
+def _env_float(name: str, default: float) -> float:
+    try:
+        return float(os.getenv(name, str(default)))
+    except Exception:
+        return default
+
+
+class KWinIdleTime(ServiceInterface):
+    def __init__(self, name: str, threshold: float):
         super().__init__(name)
+        self.threshold = max(1.0, float(threshold))
+        now = time.monotonic()
+        self._last_interaction: float = now
+        self._last_mark_call: float = now
+        self._idle_since: Optional[float] = None
 
     @dbus_next.service.method(name="MarkInteraction")
     def MarkInteraction(self):
-        global last_interaction
-        global is_idle
-
-        delta_time: float = time.monotonic() - last_interaction
-        last_interaction = time.monotonic()
-
-        if is_idle:
-            print(f"User has become active @ {last_interaction * 1000:.0f}ms after {delta_time:0.1f} seconds")
-
-            is_idle = False
-            self.UserActive(delta_time)
+        now = time.monotonic()
+        if (now - self._last_mark_call) < MIN_INTERVAL:
+            return
+        self._last_mark_call = now
+        was_idle = self._idle_since is not None
+        self._last_interaction = now
+        if was_idle:
+            idle_seconds = float(now - self._idle_since) if self._idle_since else 0.0
+            self._idle_since = None
+            try:
+                self.UserActive(idle_seconds)
+            except Exception:
+                pass
 
     @dbus_next.service.signal(name="UserIdle")
     def UserIdle(self) -> "":
@@ -51,47 +57,43 @@ class KWinIdleTime(dbus_next.service.ServiceInterface):
         return idle_time
 
 
-async def run(stop_event: asyncio.Event = asyncio.Event()):
-    global threshold_time
-    global running
-    global last_interaction
-    global is_idle
+async def run(stop_event: asyncio.Event = asyncio.Event()) -> int:
+    threshold_time: float = _env_float("KWINIDLETIME_THRESHOLD_SECONDS", DEFAULT_THRESHOLD)
 
-    running = True
-
-    bus: dbus_next.aio.message_bus.MessageBus = dbus_next.aio.message_bus.MessageBus(bus_type=dbus_next.constants.BusType.SESSION)
-
+    bus: MessageBus = MessageBus()
     await bus.connect()
 
-    await bus.request_name(name="io.github.kale_ko.KWinIdleTime", flags=dbus_next.constants.NameFlag.NONE)
+    reply = await bus.request_name(IFACE, flags=NameFlag.DO_NOT_QUEUE)
+    if reply != RequestNameReply.PRIMARY_OWNER:
+        print(f"{IFACE} already owned; exiting.", file=sys.stderr)
+        return 1
 
-    interface: KWinIdleTime = KWinIdleTime(name="io.github.kale_ko.KWinIdleTime")
+    iface = KWinIdleTime(name=IFACE, threshold=threshold_time)
+    bus.export(OBJ_PATH, iface)
 
-    bus.export(path="/io/github/kale_ko/KWinIdleTime", interface=interface)
-
-    while running and not stop_event.is_set():
+    try:
+        while not stop_event.is_set():
+            await asyncio.sleep(0.5)
+            if iface._idle_since is None:
+                now = time.monotonic()
+                if (now - iface._last_interaction) >= iface.threshold:
+                    iface._idle_since = now
+                    try:
+                        iface.UserIdle()
+                    except Exception:
+                        pass
+    finally:
+        bus.unexport(OBJ_PATH, iface)
         try:
-            await asyncio.sleep(1)
-        except (KeyboardInterrupt, asyncio.CancelledError):
-            running = False
-
-        if not is_idle:
-            current_time: float = time.monotonic()
-            if current_time - last_interaction > threshold_time:
-                print(f"User has become idle @ {last_interaction * 1000:.0f}ms")
-
-                is_idle = True
-                interface.UserIdle()
-
-    bus.unexport(path="/io/github/kale_ko/KWinIdleTime", interface=interface)
-
-    await bus.release_name(name="io.github.kale_ko.KWinIdleTime")
-
-    bus.disconnect()
+            await bus.release_name(IFACE)
+        except Exception:
+            pass
+        bus.disconnect()
+    return 0
 
 
 if __name__ == "__main__":
     try:
-        asyncio.run(run())
-    except (KeyboardInterrupt, asyncio.CancelledError):
-        running = False
+        raise SystemExit(asyncio.run(run()))
+    except KeyboardInterrupt:
+        raise SystemExit(130)

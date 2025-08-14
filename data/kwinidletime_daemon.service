@@ -1,16 +1,32 @@
 [Unit]
-Description=KWinIdleTime Daemon Service
-Requires=dbus.socket
-Conflicts=kwinidletime_combined.service
-After=dbus.socket
-ConditionUser=!@system
+Description=KWin Idle Time Daemon
+After=graphical-session.target
+PartOf=graphical-session.target
 
 [Service]
-EnvironmentFile=%{config_dir}/config
-Type=dbus
-BusName=io.github.kale_ko.KWinIdleTime
-ExecStart=/usr/bin/python3 "%{install_dir}/daemon.py" --threshold ${KWINIDLETIME_THRESHOLD}
-WorkingDirectory=%{install_dir}
+Type=simple
+ExecStart=/usr/bin/env python3 %h/.local/share/kwinidletime/daemon.py
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ProtectControlGroups=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RestrictRealtime=yes
+RestrictNamespaces=yes
+UMask=0077
+RestrictAddressFamilies=AF_UNIX
+IPAddressDeny=any
+Environment=KWINIDLETIME_THRESHOLD_SECONDS=120
+Restart=on-failure
+RestartSec=2s
+StartLimitBurst=5
+StartLimitIntervalSec=30s
 
 [Install]
-WantedBy=graphical-session.target
+WantedBy=default.target
