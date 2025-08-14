@@ -5,7 +5,7 @@ import argparse
 
 arg_parser: argparse.ArgumentParser = argparse.ArgumentParser(prog=sys.argv[0], usage="%(prog)s [options]", description="KWin Idle Time Listener", epilog="For more information, visit https://github.com/Kale-Ko/KWinIdleTime")
 
-arg_parser.add_argument("-l", "--listener-path", type=str, required=True, help="Set the path that listeners are automatically loaded from. Files must be executable to be loaded.")
+arg_parser.add_argument("-l", "--listeners-path", type=str, required=True, help="Set the path that listeners are automatically loaded from. Files must be executable to be loaded.")
 
 if __name__ != "__main__":
     arg_parser.add_argument("-t", "--threshold", type=float, default=120.0, help="Set how long it will for the daemon to mark the user as idle (default: 2 minutes)")
@@ -18,19 +18,18 @@ import os
 import os.path
 import subprocess
 
-listener_path: str = os.path.abspath(args.listener_path)
+listeners_path: str = os.path.abspath(args.listeners_path)
 
 listeners: list[str] = []
 
 
 def load_listeners():
-    if not os.path.exists(listener_path):
-        os.mkdir(listener_path)
+    os.makedirs(listeners_path, exist_ok=True)
 
-    files: list[str] = os.listdir(listener_path)
+    files: list[str] = os.listdir(listeners_path)
 
     for file in files:
-        file: str = os.path.join(listener_path, file)
+        file: str = os.path.join(listeners_path, file)
         if not os.path.isfile(file):
             continue
 
@@ -52,7 +51,7 @@ def on_user_idle():
 
     for listener in listeners:
         try:
-            subprocess.run(args=[listener, "idle"], cwd=listener_path, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True, timeout=15.0)
+            subprocess.run(args=[listener, "idle"], cwd=listeners_path, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True, timeout=15.0)
         except subprocess.CalledProcessError as e:
             print(f"Error executing listener '{listener}': {e}")
             continue
@@ -66,7 +65,7 @@ def on_user_active(delta: float):
 
     for listener in listeners:
         try:
-            subprocess.run(args=[listener, "active", f"{delta:.2f}"], cwd=listener_path, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True, timeout=15.0)
+            subprocess.run(args=[listener, "active", f"{delta:.2f}"], cwd=listeners_path, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True, timeout=15.0)
         except subprocess.CalledProcessError as e:
             print(f"Error executing listener '{listener}': {e}")
             continue
