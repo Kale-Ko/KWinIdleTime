@@ -92,7 +92,8 @@ async def run():
 
     await bus.connect()
 
-    kwin_idle_time_introspection = await bus.introspect("io.github.kale_ko.KWinIdleTime", "/io/github/kale_ko/KWinIdleTime")
+    kwin_idle_time_introspection_data = open(os.path.join(os.path.dirname(__file__), "io.github.kale_ko.KWinIdleTime.xml")).read()
+    kwin_idle_time_introspection = dbus_next.introspection.Node.parse(kwin_idle_time_introspection_data)
     kwin_idle_time_proxy_object = bus.get_proxy_object("io.github.kale_ko.KWinIdleTime", "/io/github/kale_ko/KWinIdleTime", introspection=kwin_idle_time_introspection)
     kwin_idle_time = kwin_idle_time_proxy_object.get_interface("io.github.kale_ko.KWinIdleTime")
 

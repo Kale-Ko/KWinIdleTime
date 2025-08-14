@@ -1,13 +1,13 @@
 build: build_daemon build_listener build_combined
 
 build_daemon: python/daemon.py
-	pyinstaller --clean --noconfirm --onefile --name daemon python/daemon.py --distpath dist/ --workpath build/ --specpath build/ --noconsole --optimize 2 --strip --argv-emulation
+	pyinstaller --clean --noconfirm --onefile --name daemon python/daemon.py --add-data ../python/io.github.kale_ko.KWinIdleTime.xml:./ --distpath dist/ --workpath build/ --specpath build/ --noconsole --optimize 2
 
 build_listener: python/listener.py
-	pyinstaller --clean --noconfirm --onefile --name listener python/listener.py --distpath dist/ --workpath build/ --specpath build/ --noconsole --optimize 2 --strip --argv-emulation
+	pyinstaller --clean --noconfirm --onefile --name listener python/listener.py --add-data ../python/io.github.kale_ko.KWinIdleTime.xml:./ --distpath dist/ --workpath build/ --specpath build/ --noconsole --optimize 2
 
 build_combined: python/combined.py
-	pyinstaller --clean --noconfirm --onefile --name combined python/combined.py --distpath dist/ --workpath build/ --specpath build/ --noconsole --optimize 2 --strip --argv-emulation
+	pyinstaller --clean --noconfirm --onefile --name combined python/combined.py --add-data ../python/io.github.kale_ko.KWinIdleTime.xml:./ --distpath dist/ --workpath build/ --specpath build/ --noconsole --optimize 2
 
 install: install_kwin_script
 
