@@ -2,15 +2,21 @@
 Description=KWinIdleTime Combined Service
 Requires=dbus.socket
 Conflicts=kwinidletime_daemon.service kwinidletime_listener.service
-After=dbus.socket
-ConditionUser=!@system
+After=dbus.socket graphical-session.target
+AssertUser=!@system
 
 [Service]
 EnvironmentFile=%{config_dir}/config
 Type=dbus
 BusName=io.github.kale_ko.KWinIdleTime
-ExecStart=/usr/bin/python3 "%{install_dir}/combined.py" --threshold ${KWINIDLETIME_THRESHOLD} --listeners-path "%{config_dir}/listeners/"
+ExecStart=/usr/bin/env python3 "%{install_dir}/combined.py" --threshold ${KWINIDLETIME_THRESHOLD} --listeners-path "%{config_dir}/listeners/"
 WorkingDirectory=%{install_dir}
+KillSignal=SIGINT
+
+Restart=on-failure
+RestartSec=2s
+StartLimitBurst=5
+StartLimitIntervalSec=30s
 
 [Install]
 WantedBy=graphical-session.target
