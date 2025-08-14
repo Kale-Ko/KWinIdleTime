@@ -64,7 +64,10 @@ async def run(stop_event: asyncio.Event = asyncio.Event()):
 
     await bus.connect()
 
-    await bus.request_name(name="io.github.kale_ko.KWinIdleTime", flags=dbus_next.constants.NameFlag.NONE)
+    requested_name: dbus_next.constants.RequestNameReply = await bus.request_name(name="io.github.kale_ko.KWinIdleTime", flags=dbus_next.constants.NameFlag.DO_NOT_QUEUE)
+    if requested_name != dbus_next.constants.RequestNameReply.PRIMARY_OWNER:
+        print(f"Bus name is already owned, exiting.", file=sys.stderr)
+        sys.exit(1)
 
     interface: KWinIdleTime = KWinIdleTime(name="io.github.kale_ko.KWinIdleTime")
 
@@ -86,7 +89,9 @@ async def run(stop_event: asyncio.Event = asyncio.Event()):
 
     bus.unexport(path="/io/github/kale_ko/KWinIdleTime", interface=interface)
 
-    await bus.release_name(name="io.github.kale_ko.KWinIdleTime")
+    release_name: dbus_next.constants.ReleaseNameReply = await bus.release_name(name="io.github.kale_ko.KWinIdleTime")
+    if release_name != dbus_next.constants.ReleaseNameReply.RELEASED:
+        print(f"Failed to release bus name.", file=sys.stderr)
 
     bus.disconnect()
 
