@@ -27,13 +27,20 @@ install_binaries: install_data build dist/daemon dist/listener dist/combined
 	sudo install -Dm755 dist/listener -t /usr/local/share/kwinidletime/
 	sudo install -Dm755 dist/combined -t /usr/local/share/kwinidletime/
 
+define default_config
+KWINIDLETIME_THRESHOLD=300
+endef
+export default_config
+
 install_services: install_scripts data/kwinidletime_daemon.service data/kwinidletime_listener.service data/kwinidletime_combined.service
+	if [ ! -f "$${XDG_CONFIG_HOME-$$HOME/.config}/kwinidletime/config" ]; then echo $$default_config >"$${XDG_CONFIG_HOME-$$HOME/.config}/kwinidletime/config"; fi
+
 	cp data/kwinidletime_daemon.service /tmp/kwinidletime_daemon.service
 	cp data/kwinidletime_listener.service /tmp/kwinidletime_listener.service
 	cp data/kwinidletime_combined.service /tmp/kwinidletime_combined.service
 
 	sed -i 's|%{install_dir}|/usr/local/share/kwinidletime|' /tmp/kwinidletime_daemon.service /tmp/kwinidletime_listener.service /tmp/kwinidletime_combined.service
-	sed -i 's|%{config_dir}|%E/kwinidletime/listeners|' /tmp/kwinidletime_daemon.service /tmp/kwinidletime_listener.service /tmp/kwinidletime_combined.service
+	sed -i 's|%{config_dir}|%E/kwinidletime|' /tmp/kwinidletime_daemon.service /tmp/kwinidletime_listener.service /tmp/kwinidletime_combined.service
 
 	sudo install -Dm644 /tmp/kwinidletime_daemon.service -t /usr/local/lib/systemd/user/
 	sudo install -Dm644 /tmp/kwinidletime_listener.service -t /usr/local/lib/systemd/user/
