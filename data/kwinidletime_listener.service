@@ -2,14 +2,20 @@
 Description=KWinIdleTime Listener Service
 Requires=dbus.socket kwinidletime_daemon.service
 Conflicts=kwinidletime_combined.service
-After=dbus.socket kwinidletime_daemon.service
-ConditionUser=!@system
+After=dbus.socket graphical-session.target kwinidletime_daemon.service
+AssertUser=!@system
 
 [Service]
 EnvironmentFile=%{config_dir}/config
 Type=simple
-ExecStart=/usr/bin/python3 "%{install_dir}/listener.py" --listeners-path "%{config_dir}/listeners/"
+ExecStart=/usr/bin/env python3 "%{install_dir}/listener.py" --listeners-path "%{config_dir}/listeners/"
 WorkingDirectory=%{install_dir}
+KillSignal=SIGINT
+
+Restart=on-failure
+RestartSec=2s
+StartLimitBurst=5
+StartLimitIntervalSec=30s
 
 [Install]
 Also=kwinidletime_daemon.service
