@@ -51,7 +51,7 @@ class KWinIdleTime(dbus_next.service.ServiceInterface):
         return idle_time
 
 
-async def run():
+async def run(stop_event: asyncio.Event = asyncio.Event()):
     global threshold_time
     global running
     global last_interaction
@@ -69,7 +69,7 @@ async def run():
 
     bus.export(path="/io/github/kale_ko/KWinIdleTime", interface=interface)
 
-    while running:
+    while running and not stop_event.is_set():
         try:
             await asyncio.sleep(1)
         except (KeyboardInterrupt, asyncio.CancelledError):
