@@ -7,9 +7,6 @@ arg_parser: argparse.ArgumentParser = argparse.ArgumentParser(prog=sys.argv[0], 
 
 arg_parser.add_argument("-l", "--listeners-path", type=str, required=True, help="Set the path that listeners are automatically loaded from. Files must be executable to be loaded.")
 
-if __name__ != "__main__":
-    arg_parser.add_argument("-t", "--threshold", type=float, default=120.0, help="Set how long it will for the daemon to mark the user as idle (default: 2 minutes)")
-
 args: argparse.Namespace = arg_parser.parse_args(sys.argv[1::])
 
 
@@ -62,12 +59,11 @@ def load_listeners():
 
 
 def on_user_idle():
-    if __name__ == "__main__":
-        print(f"User has become idle.")
+    print(f"User has become idle.")
 
     for listener in listeners:
         try:
-            subprocess.run(args=[listener, "idle"], cwd=listeners_path, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True, timeout=15.0)
+            subprocess.run(args=[listener, "idle"], cwd=listeners_path, start_new_session=True, close_fds=True, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True, timeout=15.0)
         except subprocess.SubprocessError as e:
             print(f"Error executing listener '{listener}': {e}", file=sys.stderr)
             continue
@@ -75,13 +71,12 @@ def on_user_idle():
         print(f"Executed idle listener '{listener}'.")
 
 
-def on_user_active(delta: float):
-    if __name__ == "__main__":
-        print(f"User has become active after {delta:0.1f} seconds")
+def on_user_active(delta_time: float):
+    print(f"User has become active after {delta_time:0.1f} seconds")
 
     for listener in listeners:
         try:
-            subprocess.run(args=[listener, "active", f"{delta:.2f}"], cwd=listeners_path, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True, timeout=15.0)
+            subprocess.run(args=[listener, "active", f"{delta_time:.2f}"], cwd=listeners_path, start_new_session=True, close_fds=True, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True, timeout=15.0)
         except subprocess.SubprocessError as e:
             print(f"Error executing listener '{listener}': {e}", file=sys.stderr)
             continue
@@ -90,6 +85,7 @@ def on_user_active(delta: float):
 
 
 load_listeners()
+
 
 import asyncio
 import dbus_next
