@@ -87,7 +87,8 @@ async def run():
     bus.disconnect()
 
 
-try:
-    asyncio.run(run())
-except (KeyboardInterrupt, asyncio.CancelledError):
-    running = False
+if __name__ == "__main__":
+    try:
+        asyncio.run(run())
+    except (KeyboardInterrupt, asyncio.CancelledError):
+        running = False

@@ -24,10 +24,10 @@ def load_listeners():
     if not os.path.exists(listener_path):
         os.mkdir(listener_path)
 
-    files = os.listdir(listener_path)
+    files: list[str] = os.listdir(listener_path)
 
     for file in files:
-        file = os.path.join(listener_path, file)
+        file: str = os.path.join(listener_path, file)
         if not os.path.isfile(file):
             continue
 
@@ -44,7 +44,8 @@ def load_listeners():
 
 
 def on_user_idle():
-    print(f"User is idle.")
+    if __name__ == "__main__":
+        print(f"User has become idle.")
 
     for listener in listeners:
         try:
@@ -57,7 +58,8 @@ def on_user_idle():
 
 
 def on_user_active(delta: float):
-    print(f"User is active after {delta:.1f} seconds.")
+    if __name__ == "__main__":
+        print(f"User has become active after {delta:0.1f} seconds")
 
     for listener in listeners:
         try:
@@ -103,7 +105,8 @@ async def run():
     bus.disconnect()
 
 
-try:
-    asyncio.run(run())
-except (KeyboardInterrupt, asyncio.CancelledError):
-    running = False
+if __name__ == "__main__":
+    try:
+        asyncio.run(run())
+    except (KeyboardInterrupt, asyncio.CancelledError):
+        running = False
