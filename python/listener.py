@@ -53,7 +53,7 @@ def on_user_idle():
     for listener in listeners:
         try:
             subprocess.run(args=[listener, "idle"], cwd=listeners_path, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True, timeout=15.0)
-        except subprocess.CalledProcessError as e:
+        except subprocess.SubprocessError as e:
             print(f"Error executing listener '{listener}': {e}")
             continue
 
@@ -67,7 +67,7 @@ def on_user_active(delta: float):
     for listener in listeners:
         try:
             subprocess.run(args=[listener, "active", f"{delta:.2f}"], cwd=listeners_path, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True, timeout=15.0)
-        except subprocess.CalledProcessError as e:
+        except subprocess.SubprocessError as e:
             print(f"Error executing listener '{listener}': {e}")
             continue
 
