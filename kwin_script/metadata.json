@@ -4,7 +4,7 @@
     "Id": "KWinIdleTime",
     "Version": "1.0.0",
     "Name": "KWinIdleTime",
-    "Description": "A script that sends idle notifications to a listening user daemon.",
+    "Description": "A script that sends interaction notifications to a listening user daemon.",
     "Icon": "preferences-system-windows",
     "Authors": [
       {
