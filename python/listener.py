@@ -26,16 +26,31 @@ listeners: list[str] = []
 def load_listeners():
     print(f"Looking for listeners in '{listeners_path}'...")
 
-    os.makedirs(listeners_path, exist_ok=True)
+    os.makedirs(os.path.dirname(listeners_path), exist_ok=True)
+
+    os.umask(0o0277)
+    if not os.path.exists(listeners_path):
+        os.mkdir(listeners_path, mode=0o0500)
+
+    stat: os.stat_result = os.stat(listeners_path, follow_symlinks=False)
+    if stat.st_uid != os.getuid() or stat.st_gid != os.getgid():
+        raise Exception(f"The owner {stat.st_uid}:{stat.st_gid} of directory '{listeners_path}' is not the current user {os.getuid()}:{os.getgid()}.")
+    elif stat.st_mode & 0o7277 > 0:
+        raise Exception(f"The permissions {oct(stat.st_mode & 0o7777).zfill(3)} of directory '{listeners_path}' are too permissive, set them to 500.")
 
     files: list[str] = os.listdir(listeners_path)
 
     for file in files:
         file: str = os.path.join(listeners_path, file)
-        if not os.path.isfile(file):
+        if not os.path.isfile(file) or not os.access(file, os.R_OK | os.X_OK, follow_symlinks=False):
             continue
 
-        if not os.access(file, os.R_OK | os.X_OK):
+        perms: int = os.stat(file, follow_symlinks=False).st_mode
+        if stat.st_uid != os.getuid() or stat.st_gid != os.getgid():
+            print(f"WARNING: The owner {stat.st_uid}:{stat.st_gid} of file '{file}' is not the current user {os.getuid()}:{os.getgid()}. This listener will not be loaded.", file=sys.stderr)
+            continue
+        elif perms & 0o7277 > 0:
+            print(f"WARNING: The permissions {oct(perms & 0o7777).zfill(3)} of file '{file}' are too permissive, set them to 500. This listener will not be loaded.", file=sys.stderr)
             continue
 
         listeners.append(file)
@@ -43,7 +58,7 @@ def load_listeners():
     if len(listeners) > 0:
         print(f"Loaded {len(listeners)} listeners successfully.")
     else:
-        print(f"No listeners found!")
+        print(f"No listeners found!", file=sys.stderr)
 
 
 def on_user_idle():
@@ -54,7 +69,7 @@ def on_user_idle():
         try:
             subprocess.run(args=[listener, "idle"], cwd=listeners_path, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True, timeout=15.0)
         except subprocess.SubprocessError as e:
-            print(f"Error executing listener '{listener}': {e}")
+            print(f"Error executing listener '{listener}': {e}", file=sys.stderr)
             continue
 
         print(f"Executed idle listener '{listener}'.")
@@ -68,7 +83,7 @@ def on_user_active(delta: float):
         try:
             subprocess.run(args=[listener, "active", f"{delta:.2f}"], cwd=listeners_path, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True, timeout=15.0)
         except subprocess.SubprocessError as e:
-            print(f"Error executing listener '{listener}': {e}")
+            print(f"Error executing listener '{listener}': {e}", file=sys.stderr)
             continue
 
         print(f"Executed active listener '{listener}'.")
