@@ -6,9 +6,10 @@ After=dbus.socket
 ConditionUser=!@system
 
 [Service]
+EnvironmentFile=%{config_dir}/config
 Type=dbus
 BusName=io.github.kale_ko.KWinIdleTime
-ExecStart=/usr/bin/python3 "%{install_dir}/daemon.py" --threshold 300
+ExecStart=/usr/bin/python3 "%{install_dir}/daemon.py" --threshold ${KWINIDLETIME_THRESHOLD}
 WorkingDirectory=%{install_dir}
 
 [Install]

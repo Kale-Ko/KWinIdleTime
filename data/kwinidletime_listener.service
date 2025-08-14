@@ -6,8 +6,9 @@ After=dbus.socket kwinidletime_daemon.service
 ConditionUser=!@system
 
 [Service]
+EnvironmentFile=%{config_dir}/config
 Type=simple
-ExecStart=/usr/bin/python3 "%{install_dir}/listener.py" --listeners-path "%{config_dir}/"
+ExecStart=/usr/bin/python3 "%{install_dir}/listener.py" --listeners-path "%{config_dir}/listeners/"
 WorkingDirectory=%{install_dir}
 
 [Install]
