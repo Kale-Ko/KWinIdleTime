@@ -83,7 +83,7 @@ import dbus_next.aio
 running: bool = False
 
 
-async def run():
+async def run(stop_event: asyncio.Event = asyncio.Event()):
     global running
 
     running = True
@@ -92,15 +92,15 @@ async def run():
 
     await bus.connect()
 
-    kwin_idle_time_introspection_data = open(os.path.join(os.path.dirname(__file__), "io.github.kale_ko.KWinIdleTime.xml")).read()
-    kwin_idle_time_introspection = dbus_next.introspection.Node.parse(kwin_idle_time_introspection_data)
-    kwin_idle_time_proxy_object = bus.get_proxy_object("io.github.kale_ko.KWinIdleTime", "/io/github/kale_ko/KWinIdleTime", introspection=kwin_idle_time_introspection)
-    kwin_idle_time = kwin_idle_time_proxy_object.get_interface("io.github.kale_ko.KWinIdleTime")
+    kwin_idle_time_introspection_data: str = open(os.path.join(os.path.dirname(__file__), "io.github.kale_ko.KWinIdleTime.xml")).read()
+    kwin_idle_time_introspection: dbus_next.introspection.Node = dbus_next.introspection.Node.parse(kwin_idle_time_introspection_data)
+    kwin_idle_time_proxy_object: dbus_next.aio.proxy_object.ProxyObject = bus.get_proxy_object("io.github.kale_ko.KWinIdleTime", "/io/github/kale_ko/KWinIdleTime", introspection=kwin_idle_time_introspection)
+    kwin_idle_time: dbus_next.aio.proxy_object.ProxyInterface = kwin_idle_time_proxy_object.get_interface("io.github.kale_ko.KWinIdleTime")
 
     kwin_idle_time.on_user_idle(on_user_idle)
     kwin_idle_time.on_user_active(on_user_active)
 
-    while running:
+    while running and not stop_event.is_set():
         try:
             await asyncio.sleep(1)
         except (KeyboardInterrupt, asyncio.CancelledError):
