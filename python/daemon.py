@@ -20,7 +20,7 @@ import time
 threshold_time: float = args.threshold
 
 running: bool = False
-last_interaction: float = time.time()
+last_interaction: float = time.monotonic()
 is_idle: bool = False
 
 
@@ -33,8 +33,8 @@ class KWinIdleTime(dbus_next.service.ServiceInterface):
         global last_interaction
         global is_idle
 
-        delta_time: float = time.time() - last_interaction
-        last_interaction = time.time()
+        delta_time: float = time.monotonic() - last_interaction
+        last_interaction = time.monotonic()
 
         if is_idle:
             print(f"User has become active @ {last_interaction * 1000:.0f}ms after {delta_time:0.1f} seconds")
@@ -76,7 +76,7 @@ async def run(stop_event: asyncio.Event = asyncio.Event()):
             running = False
 
         if not is_idle:
-            current_time: float = time.time()
+            current_time: float = time.monotonic()
             if current_time - last_interaction > threshold_time:
                 print(f"User has become idle @ {last_interaction * 1000:.0f}ms")
 
