@@ -1,10 +1,13 @@
-build: build_daemon build_listener
+build: build_daemon build_listener build_combined
 
-build_daemon: daemon/main.py
-	pyinstaller --clean --noconfirm --onefile --name daemon daemon/main.py --distpath dist/ --workpath build/ --specpath build/ --noconsole --optimize 2 --strip --argv-emulation
+build_daemon: python/daemon.py
+	pyinstaller --clean --noconfirm --onefile --name daemon python/daemon.py --distpath dist/ --workpath build/ --specpath build/ --noconsole --optimize 2 --strip --argv-emulation
 
-build_listener: listener/main.py
-	pyinstaller --clean --noconfirm --onefile --name listener listener/main.py --distpath dist/ --workpath build/ --specpath build/ --noconsole --optimize 2 --strip --argv-emulation
+build_listener: python/listener.py
+	pyinstaller --clean --noconfirm --onefile --name listener python/listener.py --distpath dist/ --workpath build/ --specpath build/ --noconsole --optimize 2 --strip --argv-emulation
+
+build_combined: python/combined.py
+	pyinstaller --clean --noconfirm --onefile --name combined python/combined.py --distpath dist/ --workpath build/ --specpath build/ --noconsole --optimize 2 --strip --argv-emulation
 
 install: install_kwin_script
 
