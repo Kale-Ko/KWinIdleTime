@@ -24,6 +24,8 @@ listeners: list[str] = []
 
 
 def load_listeners():
+    print(f"Looking for listeners in '{listeners_path}'...")
+
     os.makedirs(listeners_path, exist_ok=True)
 
     files: list[str] = os.listdir(listeners_path)
@@ -41,8 +43,7 @@ def load_listeners():
     if len(listeners) > 0:
         print(f"Loaded {len(listeners)} listeners successfully.")
     else:
-        print(f"No listeners found.")
-        sys.exit(1)
+        print(f"No listeners found!")
 
 
 def on_user_idle():
