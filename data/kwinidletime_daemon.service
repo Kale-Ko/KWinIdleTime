@@ -1,0 +1,15 @@
+[Unit]
+Description=KWinIdleTime Daemon Service
+Requires=dbus.socket
+Conflicts=kwinidletime_combined.service
+After=dbus.socket
+ConditionUser=!@system
+
+[Service]
+Type=dbus
+BusName=io.github.kale_ko.KWinIdleTime
+ExecStart=/usr/bin/python3 "%{install_dir}/daemon.py" --threshold 300
+WorkingDirectory=%{install_dir}
+
+[Install]
+WantedBy=graphical-session.target

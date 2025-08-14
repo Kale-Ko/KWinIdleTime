@@ -1,0 +1,15 @@
+[Unit]
+Description=KWinIdleTime Listener Service
+Requires=dbus.socket kwinidletime_daemon.service
+Conflicts=kwinidletime_combined.service
+After=dbus.socket kwinidletime_daemon.service
+ConditionUser=!@system
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 "%{install_dir}/listener.py" --listeners-path "%{config_dir}/"
+WorkingDirectory=%{install_dir}
+
+[Install]
+Also=kwinidletime_daemon.service
+WantedBy=graphical-session.target
