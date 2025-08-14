@@ -22,9 +22,9 @@ You can undo an installation completly by running `make uninstall`.
 
 The configuration and listener scripts are placed in `$XDG_CONFIG_HOME/kwinidletime/` and `$XDG_CONFIG_HOME/kwinidletime/listeners/` respectivly. `$XDG_CONFIG_HOME` is usually `$HOME/.config/`.
 
-### Config
+### Environment
 
-The config currently only has one value.
+The environment config (`$XDG_CONFIG_HOME/kwinidletime/config`) currently only has one value.
 
 `KWINIDLETIME_THRESHOLD` - The number of seconds it takes for the daemon to mark you as idle.
 
@@ -34,5 +34,5 @@ The config currently only has one value.
 
 Listener scripts are just any file in the `listeners/` directory that is executable. They will be executed one by one in the same way they would be if you did `./script` in a shell (using binfmt/shebangs).
 
-When a user goes idle scripts will be passed the single argument "idle".
-When a user becomes active again scripts will be passed two arguments, "active" and the number of seconds the user was idle for.
+When a user goes idle, scripts will be passed the single argument "idle".
+When a user becomes active again, scripts will be passed two arguments, "active" and the number of seconds the user was idle for.
