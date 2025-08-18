@@ -10,7 +10,7 @@ EnvironmentFile=%{config_dir}/config
 Type=dbus
 BusName=io.github.kale_ko.KWinIdleTime
 ExecStart=/usr/bin/env python3 "%{install_dir}/daemon.py" --threshold ${KWINIDLETIME_THRESHOLD}
-WorkingDirectory=%{install_dir}
+WorkingDirectory=%{install_dir}/
 KillSignal=SIGINT
 
 Restart=on-failure

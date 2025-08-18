@@ -9,7 +9,7 @@ AssertUser=!@system
 EnvironmentFile=%{config_dir}/config
 Type=simple
 ExecStart=/usr/bin/env python3 "%{install_dir}/listener.py" --listeners-path "%{config_dir}/listeners/"
-WorkingDirectory=%{install_dir}
+WorkingDirectory=%{install_dir}/
 KillSignal=SIGINT
 
 Restart=on-failure

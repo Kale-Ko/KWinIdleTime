@@ -8,6 +8,7 @@ var c = 0;
 workspace.cursorPosChanged.connect(function () {
     if (c % CURSOR_INTERVAL === 0) {
         markInteraction();
+        c == 0;
     }
     c++;
 });
